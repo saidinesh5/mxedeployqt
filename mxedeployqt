@@ -8,7 +8,7 @@ I don"t know why they disabled it, but here it is.
 
 Example:
 
-mxedeployqt --qtplugins="canbus;iconengines;imageformats;platforminputcontexts;platforms;sqldrivers;styles" --skip="qsqlmysql.dll;qsqlodbc.dll;qsqlpsql.dll;qsqltds.dll" --mxepath=~/mxe/usr --qmlrootpath=$PWD/src/app $PWD/build/dist
+mxedeployqt --qtplugins="canbus;iconengines;imageformats;platforminputcontexts;platforms;sqldrivers;styles" --skiplibs="qsqlmysql.dll;qsqlodbc.dll;qsqlpsql.dll;qsqltds.dll"  --additionallibs="libwinpthread-1.dll;icudt56.dll;icuin56.dll;icuuc56.dll" --mxepath=~/mxe/usr --qmlrootpath=$PWD/src/app $PWD/build/dist
 
 This program then scans your mxe installation for available executables and dlls and copies their dependencies to the target directory
 

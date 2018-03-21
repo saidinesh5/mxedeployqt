@@ -12,7 +12,7 @@ It grabs all the qt dependencies your program may need, in order to deploy it.
 ### Example usage:
 
 ```
-mxedeployqt --qtplugins="canbus;iconengines;imageformats;platforminputcontexts;platforms;sqldrivers;styles" --skip="qsqlmysql.dll;qsqlodbc.dll;qsqlpsql.dll;qsqltds.dll" --mxepath=~/mxe/usr --qmlrootpath=$PWD/src target/
+mxedeployqt --qtplugins="canbus;iconengines;imageformats;platforminputcontexts;platforms;sqldrivers;styles" --skiplibs="qsqlmysql.dll;qsqlodbc.dll;qsqlpsql.dll;qsqltds.dll" --additionallibs="libwinpthread-1.dll;icudt56.dll;icuin56.dll;icuuc56.dll" --mxepath=~/mxe/usr --qmlrootpath=$PWD/src target/
 ```
 
 ### Available options:
@@ -20,7 +20,8 @@ mxedeployqt --qtplugins="canbus;iconengines;imageformats;platforminputcontexts;p
 ```
 usage: mxedeployqt [-h] [--mxepath MXEPATH] [--mxetarget MXETARGET]
                    [--qtplugins QTPLUGINS] [--qmlmodules QMLMODULES]
-                   [--skip SKIP] [--qmlrootpath QMLROOTPATH]
+                   [--skiplibs SKIPLIBS] [--additionallibs ADDITIONALLIBS]
+                   [--qmlrootpath QMLROOTPATH]
                    target
 
 positional arguments:
@@ -38,7 +39,9 @@ optional arguments:
                         ; separated list of qml modules to copy. (Default
                         autodetected, if qmlrootpath is supplied and
                         qmlimportscanner is available
-  --skip SKIP           ; separated list of libraries to skip. (Default: None)
+  --skiplibs SKIPLIBS   ; separated list of libraries to skip. (Default: None)
+  --additionallibs ADDITIONALLIBS
+                        ; separated list of libraries to copy. (Default: None)
   --qmlrootpath QMLROOTPATH
                         Path in the source directory to scan qml files for,
                         for using modules

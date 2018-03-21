@@ -41,7 +41,7 @@ def list_dependencies(objdump, binary):
         output = getoutput(objdump + " -x " + binary).split("\n")
         result = [ l.replace("\tDLL Name: ", "", 1).strip() for l in output if l.find("DLL Name") != -1 ]
     else:
-        logging.error("Error! Unable to fetch dependencies for", binary, "with", objdump)
+        logging.error("Error! Unable to fetch dependencies for" + binary + "with" + objdump)
     return result
 
 def process_binary(objdump, available_dlls, binary_path, target, skip, done = [], level = 1):
@@ -66,7 +66,7 @@ def process_binary(objdump, available_dlls, binary_path, target, skip, done = []
     return result
 
 def copy_dir(source_dirpath, destination_dirpath, skip):
-    logging.info("Copying:", source_dirpath, "->", destination_dirpath)
+    logging.info("Copying:" + source_dirpath +  "-> " + destination_dirpath)
     try:
         shutil.copytree(source_dirpath, destination_dirpath, ignore=shutil.ignore_patterns(*skip))
     except:
@@ -80,8 +80,8 @@ def copy_additionaldlls(available_dlls, dlls, target):
             logging.info("Copying:" + dll)
             shutil.copy(available_dlls[dll], target)
             result.append(available_dlls[dll])
-    else:
-        logging.warning(dll + " Not found (SKIPPING)")
+        else:
+            logging.warning(dll + " Not found (SKIPPING)")
     return result
 
 def copy_qtplugins(qmake, qtplugins, target, skip):
@@ -101,7 +101,7 @@ def copy_qtplugins(qmake, qtplugins, target, skip):
             if p in available_plugins:
                 plugins.append(p)
             else:
-                logging.warning("Qt plugin Not found:", p, "(SKIPPING)")
+                logging.warning("Qt plugin Not found:" +  p + "(SKIPPING)")
 
         for p in plugins:
             copy_dir(os.path.join(path, p), os.path.join(target, p), skip)
@@ -120,7 +120,7 @@ def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, sk
 
     qt_install_qml = getoutput(qmake + " -query QT_INSTALL_QML")
     if qt_install_qml:
-        logging.info("Copying qml plugins from: ", qt_install_qml)
+        logging.info("Copying qml plugins from: " + qt_install_qml)
 
         used_qmlimports = json.loads(getoutput(qmlimportscanner + " -rootPath " + qmlrootpath + " -importPath " + qt_install_qml))
 
@@ -165,7 +165,7 @@ def create_qtconf(target, plugins, imports, qmlimports):
         qtconf.write(contents)
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(format="[%(levelname)s]  %(message)s", level=logging.DEBUG)
     parser = argparse.ArgumentParser(conflict_handler='resolve')
 
     parser.add_argument("--mxepath",
@@ -216,6 +216,7 @@ def main():
         additionallibs = additionallibs.split(";")
     else:
         additionallibs = []
+
     mxe_files = find_files(mxe_path)
     mxe_target_files = [f for f in mxe_files if f.find(mxe_target) != -1]
     mxe_dlls = [f for f in mxe_target_files if f.lower().endswith(".dll")]
@@ -238,9 +239,9 @@ def main():
         sys.exit(1)
 
     logging.info("Using the following binaries:")
-    logging.info("  objdump: " + objdump)
-    logging.info("  qmake: " +  qmake)
-    logging.info("  qmlimportscanner: " + qmlimportscanner)
+    logging.info("  objdump: " + str(objdump))
+    logging.info("  qmake: " +  str(qmake))
+    logging.info("  qmlimportscanner: " + str(qmlimportscanner))
 
     copy_additionaldlls(dict([(os.path.basename(f), f) for f in mxe_dlls]), additionallibs, target)
     copy_qtplugins(qmake, qt_plugins, os.path.join(target, "plugins"), skip)

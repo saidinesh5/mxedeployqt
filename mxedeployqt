@@ -1,0 +1,255 @@
+#! /usr/bin/env python
+
+"""
+Thanks to pyWindeployqt by Alexey Elymanov (strangeqargo@gmail.com)
+
+This is a python implementation of windeployqt, which is missing in mxe
+I don"t know why they disabled it, but here it is.
+
+Example:
+
+mxedeployqt --qtplugins="canbus;iconengines;imageformats;platforminputcontexts;platforms;sqldrivers;styles" --skip="qsqlmysql.dll;qsqlodbc.dll;qsqlpsql.dll;qsqltds.dll" --mxepath=~/mxe/usr --qmlrootpath=$PWD/src/app $PWD/build/dist
+
+This program then scans your mxe installation for available executables and dlls and copies their dependencies to the target directory
+
+"""
+
+__author__ = "Dinesh Manajipet (mail@dinesh.cloud)"
+
+import subprocess
+import os
+import sys
+import argparse
+import logging
+import json
+import shutil
+
+def getoutput(cmd):
+    result = ""
+    try:
+        result = subprocess.check_output(cmd, shell=True, universal_newlines=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as ex:
+        result = ex.output
+
+    return result.strip("\n")
+
+def list_dependencies(objdump, binary):
+    '''returns the list of dlls the linked to a binary, given it's path and objdump path'''
+    result = []
+    if objdump and binary:
+        #command = objdump_path + " -p " + lib + " | grep -o ": .*\.dll$""
+        output = getoutput(objdump + " -x " + binary).split("\n")
+        result = [ l.replace("\tDLL Name: ", "", 1).strip() for l in output if l.find("DLL Name") != -1 ]
+    else:
+        logging.error("Error! Unable to fetch dependencies for", binary, "with", objdump)
+    return result
+
+def process_binary(objdump, available_dlls, binary_path, target, skip, done = [], level = 1):
+    '''Recursively copy all the dependencies of a given binary/dll to the target directory'''
+    binary_filename = os.path.basename(binary_path)
+    result = [binary_path]
+    dlls = list_dependencies(objdump, binary_path)
+
+    for dll in dlls:
+        if dll in available_dlls:
+            if dll not in done and dll not in skip:
+                logging.info(level*"    " + "Processing: " + dll)
+                if not os.path.exists(os.path.join(target, dll)):
+                    shutil.copy(available_dlls[dll], target)
+                done.append(dll)
+                result += process_binary(objdump, available_dlls, available_dlls[dll], target, skip, done, level + 1)
+        else:
+            if dll not in skip:
+                skip.append(dll)
+                logging.warning(level*"    " + dll + " Not found (SKIPPING)")
+
+    return result
+
+def copy_dir(source_dirpath, destination_dirpath, skip):
+    logging.info("Copying:", source_dirpath, "->", destination_dirpath)
+    try:
+        shutil.copytree(source_dirpath, destination_dirpath, ignore=shutil.ignore_patterns(*skip))
+    except:
+        logging.warning("Error copying " + source_dirpath + " -> " + destination_dirpath)
+
+def copy_additionaldlls(available_dlls, dlls, target):
+    '''Copy the list of dlls, if present in available_dlls, to target'''
+    result = []
+    for dll in dlls:
+        if dll in available_dlls:
+            logging.info("Copying:" + dll)
+            shutil.copy(available_dlls[dll], target)
+            result.append(available_dlls[dll])
+    else:
+        logging.warning(dll + " Not found (SKIPPING)")
+    return result
+
+def copy_qtplugins(qmake, qtplugins, target, skip):
+    '''Copies all qtplugins in the plugin path pointed by qmake to the target.
+    if qtplugins is None, it copies all available plugins
+    '''
+    plugins = []
+    path = getoutput(qmake + " -query QT_INSTALL_PLUGINS")
+
+    if path:
+        available_plugins = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]
+
+        if qtplugins is None:
+            qtplugins = available_plugins
+
+        for p in qtplugins:
+            if p in available_plugins:
+                plugins.append(p)
+            else:
+                logging.warning("Qt plugin Not found:", p, "(SKIPPING)")
+
+        for p in plugins:
+            copy_dir(os.path.join(path, p), os.path.join(target, p), skip)
+    else:
+        logging.error("Unable to retrieve QT_INSTALL_PLUGINS from qmake")
+
+    return plugins
+
+def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, skip):
+    '''Copy the qmlmodules to the target.
+    If qmlmodules is not provided, try try to autodetect all the imported modules in qmlrootpath.
+    If module detection isn't possible, copy all available qml modules'''
+    if (qmlrootpath == None or len(qmlrootpath) == 0 or not os.path.exists(qmlrootpath)) and qmlmodules == None:
+        logging.warning("No qmlmodules are specified and Invalid qmlrootpath provided: " + str(qmlrootpath))
+        return False
+
+    qt_install_qml = getoutput(qmake + " -query QT_INSTALL_QML")
+    if qt_install_qml:
+        logging.info("Copying qml plugins from: ", qt_install_qml)
+
+        used_qmlimports = json.loads(getoutput(qmlimportscanner + " -rootPath " + qmlrootpath + " -importPath " + qt_install_qml))
+
+        used_qmlmodules = {}
+        for i in used_qmlimports:
+            if i["type"] == "module" and "relativePath" in i and (qmlmodules is None or i["name"] in qmlmodules):
+                used_qmlmodules[i["path"]] = os.path.join(target, i["relativePath"])
+                #QTBUG-48424, QTBUG-45977: In release mode, qmlimportscanner does not report
+                #the dependency of QtQuick.Controls on QtQuick.PrivateWidgets due to missing files.
+                #Recreate the run-time logic here as best as we can - deploy it if
+                #      1) QtWidgets is used
+                #      2) QtQuick.Controls is used
+                if i["name"] == "QtQuick.Controls":
+                    used_qmlmodules[os.path.join(i["path"], "/PrivateWidgets")] = os.path.join(target, "QtQuick/PrivateWidgets")
+
+        for module_source in used_qmlmodules:
+            copy_dir(module_source, used_qmlmodules[module_source], skip)
+    else:
+        logging.error("Unable to retrieve QT_INSTALL_QMLS from qmake")
+
+    return True
+
+def find_files(path):
+    '''Find all files in the given path and it's subdirectories'''
+    logging.info("Scanning path: " + path + " for files")
+    result = []
+    for (d, _, files) in os.walk(path):
+        for f in files:
+            path = os.path.join(d, f)
+            if os.path.exists(path):
+                result.append(path)
+    return result
+
+def main():
+    logging.basicConfig(level=logging.DEBUG)
+    parser = argparse.ArgumentParser(conflict_handler='resolve')
+
+    parser.add_argument("--mxepath",
+                        help="path to mxe installation. (Default: /opt/mxe)")
+    parser.add_argument("--mxetarget",
+                        help="mxe target to use (Default: i686-w64-mingw32.shared)")
+    parser.add_argument("--qtplugins",
+                        help="; separated list of qt plugins to copy (Default: all Qt plugins)")
+    parser.add_argument("--qmlmodules",
+                        help="; separated list of qml modules to copy. (Default autodetected, if qmlrootpath is supplied and qmlimportscanner is available")
+    parser.add_argument("--skiplibs",
+                        help="; separated list of libraries to skip. (Default: None) ")
+    parser.add_argument("--additionallibs",
+                        help="; separated list of libraries to copy. (Default: None) ")
+    parser.add_argument("--qmlrootpath",
+                        help="Path in the source directory to scan qml files for, for using modules")
+    parser.add_argument("target")
+
+    args = parser.parse_args()
+    target = os.path.expanduser(args.target)
+
+    mxe_path = args.mxepath
+    if mxe_path:
+        mxe_path = os.path.expanduser(mxe_path)
+    else:
+        mxe_path = "/opt/mxe"
+
+    mxe_target = args.mxetarget
+    if not mxe_target:
+        mxe_target = "i686-w64-mingw32.shared"
+
+    qt_plugins = args.qtplugins
+    if qt_plugins:
+        qt_plugins = [p for p in qt_plugins.split(";") if len(p) > 0]
+
+    qml_modules = args.qmlmodules
+    if qml_modules:
+        qml_modules = [m for m in qml_modules.split(";") if len(m) > 0]
+
+    skip = args.skiplibs
+    if skip:
+        skip = skip.split(";")
+    else:
+        skip = []
+
+    additionallibs = args.additionallibs
+    if additionallibs:
+        additionallibs = additionallibs.split(";")
+    else:
+        additionallibs = []
+    mxe_files = find_files(mxe_path)
+    mxe_target_files = [f for f in mxe_files if f.find(mxe_target) != -1]
+    mxe_dlls = [f for f in mxe_target_files if f.lower().endswith(".dll")]
+
+    objdump = next(iter([f for f in mxe_target_files if f.endswith("objdump")]), None)
+    qmake = next(iter([f for f in mxe_target_files if f.endswith("qmake-qt5")]), None)
+    qmlimportscanner = next(iter([f for f in mxe_target_files if f.endswith("qmlimportscanner")]), None)
+
+    error = None
+
+    if not objdump:
+        error = "objdump not found"
+
+    if not qmake:
+        error = "qmake not found"
+
+    if len(sys.argv) == 1  or error:
+        logging.error("Error: " + error)
+        parser.print_help()
+        sys.exit(1)
+
+    logging.info("Using the following binaries:")
+    logging.info("  objdump: " + objdump)
+    logging.info("  qmake: " +  qmake)
+    logging.info("  qmlimportscanner: " + qmlimportscanner)
+
+    copy_qtplugins(qmake, qt_plugins, target, skip)
+    copy_qmlmodules(qmake, qmlimportscanner, args.qmlrootpath, qml_modules, target, skip)
+
+    target_files = find_files(target)
+    target_dlls = [f for f in target_files if f.lower().endswith(".dll")]
+    target_executables = [f for f in target_files if f.lower().endswith(".exe")]
+    target_binaries = target_executables + target_dlls
+
+    mxe_dlls = [f for f in mxe_target_files if f.lower().endswith(".dll")]
+
+    available_dlls = mxe_dlls + target_dlls
+    #FIXME: The assumption that there is only one dll per given filename in the mxe path
+    available_dlls_dict = dict([(os.path.basename(f), f) for f in available_dlls])
+
+    processsed_binaries = []
+    for binary in target_binaries:
+        logging.info("Processing: " + binary)
+        processsed_binaries += process_binary(objdump, available_dlls_dict, binary, target, skip)
+
+if __name__ == "__main__":
+    main()

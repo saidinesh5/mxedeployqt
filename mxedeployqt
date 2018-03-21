@@ -154,6 +154,16 @@ def find_files(path):
                 result.append(path)
     return result
 
+def create_qtconf(target, plugins, imports, qmlimports):
+    contents = ("[Paths]\n"
+                "Prefix = ./\n"
+                "Plugins = {}\n"
+                "Imports = {}\n"
+                "Qml2Imports = {}\n").format(plugins, imports, qmlimports)
+
+    with open(os.path.join(target, "qt.conf"), "w") as qtconf:
+        qtconf.write(contents)
+
 def main():
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser(conflict_handler='resolve')
@@ -232,15 +242,15 @@ def main():
     logging.info("  qmake: " +  qmake)
     logging.info("  qmlimportscanner: " + qmlimportscanner)
 
-    copy_qtplugins(qmake, qt_plugins, target, skip)
-    copy_qmlmodules(qmake, qmlimportscanner, args.qmlrootpath, qml_modules, target, skip)
+    copy_additionaldlls(dict([(os.path.basename(f), f) for f in mxe_dlls]), additionallibs, target)
+    copy_qtplugins(qmake, qt_plugins, os.path.join(target, "plugins"), skip)
+    copy_qmlmodules(qmake, qmlimportscanner, args.qmlrootpath, qml_modules, os.path.join(target, "qml"), skip)
 
     target_files = find_files(target)
     target_dlls = [f for f in target_files if f.lower().endswith(".dll")]
     target_executables = [f for f in target_files if f.lower().endswith(".exe")]
     target_binaries = target_executables + target_dlls
 
-    mxe_dlls = [f for f in mxe_target_files if f.lower().endswith(".dll")]
 
     available_dlls = mxe_dlls + target_dlls
     #FIXME: The assumption that there is only one dll per given filename in the mxe path
@@ -251,5 +261,6 @@ def main():
         logging.info("Processing: " + binary)
         processsed_binaries += process_binary(objdump, available_dlls_dict, binary, target, skip)
 
+    create_qtconf(target, "plugins", "qml", "qml")
 if __name__ == "__main__":
     main()

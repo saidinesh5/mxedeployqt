@@ -136,8 +136,13 @@ def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, sk
                 if i["name"] == "QtQuick.Controls":
                     used_qmlmodules[os.path.join(i["path"], "/PrivateWidgets")] = os.path.join(target, "QtQuick/PrivateWidgets")
 
-        for module_source in used_qmlmodules:
-            copy_dir(module_source, used_qmlmodules[module_source], skip)
+        #Only copy the outermost directory when there are nested directories
+        sorted_modules = sorted(used_qmlmodules.keys(), key=lambda x: (x, len(x)))
+        parent_dir = ""
+        for module_source in sorted_modules:
+            if len(parent_dir) < 1 or module_source.find(parent_dir) != 0:
+                copy_dir(module_source, used_qmlmodules[module_source], skip)
+                parent_dir = module_source.rstrip(os.sep)
     else:
         logging.error("Unable to retrieve QT_INSTALL_QMLS from qmake")
 

@@ -39,14 +39,13 @@ def list_dependencies(objdump, binary):
     if objdump and binary:
         #command = objdump_path + " -p " + lib + " | grep -o ": .*\.dll$""
         output = getoutput(objdump + " -x " + binary).split("\n")
-        result = [ l.replace("\tDLL Name: ", "", 1).strip() for l in output if l.find("DLL Name") != -1 ]
+        result = [ l.replace("\tDLL Name: ", "", 1).strip().lower() for l in output if l.find("DLL Name") != -1 ]
     else:
         logging.error("Error! Unable to fetch dependencies for" + binary + "with" + objdump)
     return result
 
 def process_binary(objdump, available_dlls, binary_path, target, skip, done = [], level = 1):
     '''Recursively copy all the dependencies of a given binary/dll to the target directory'''
-    binary_filename = os.path.basename(binary_path)
     result = [binary_path]
     dlls = list_dependencies(objdump, binary_path)
 
@@ -126,8 +125,8 @@ def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, sk
 
         used_qmlmodules = {}
         for i in used_qmlimports:
-            if i["type"] == "module" and "relativePath" in i and (qmlmodules is None or i["name"] in qmlmodules):
-                used_qmlmodules[i["path"]] = os.path.join(target, i["relativePath"])
+            if i["type"] == "module" and "path" in i and (qmlmodules is None or i["name"] in qmlmodules):
+                used_qmlmodules[i["path"]] = os.path.join(target, os.path.relpath(i["path"], qt_install_qml))
                 #QTBUG-48424, QTBUG-45977: In release mode, qmlimportscanner does not report
                 #the dependency of QtQuick.Controls on QtQuick.PrivateWidgets due to missing files.
                 #Recreate the run-time logic here as best as we can - deploy it if
@@ -260,7 +259,7 @@ def main():
 
     available_dlls = mxe_dlls + target_dlls
     #FIXME: The assumption that there is only one dll per given filename in the mxe path
-    available_dlls_dict = dict([(os.path.basename(f), f) for f in available_dlls])
+    available_dlls_dict = dict([(os.path.basename(f).lower(), f) for f in available_dlls])
 
     processsed_binaries = []
     for binary in target_binaries:

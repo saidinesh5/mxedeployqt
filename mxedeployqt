@@ -133,7 +133,7 @@ def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, sk
                 #      1) QtWidgets is used
                 #      2) QtQuick.Controls is used
                 if i["name"] == "QtQuick.Controls":
-                    used_qmlmodules[os.path.join(i["path"], "/PrivateWidgets")] = os.path.join(target, "QtQuick/PrivateWidgets")
+                    used_qmlmodules[os.path.join(i["path"], "PrivateWidgets")] = os.path.join(target, "QtQuick/PrivateWidgets")
 
         #Only copy the outermost directory when there are nested directories
         sorted_modules = sorted(used_qmlmodules.keys(), key=lambda x: (x, len(x)))

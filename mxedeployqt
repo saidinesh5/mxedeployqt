@@ -132,14 +132,14 @@ def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, sk
         used_qmlmodules = {}
         for i in used_qmlimports:
             if i["type"] == "module" and "path" in i and (qmlmodules is None or i["name"] in qmlmodules):
-                used_qmlmodules[i["path"]] = os.path.join(target, os.path.relpath(i["path"], qt_install_qml))
+                used_qmlmodules[os.path.abspath(i["path"])] = os.path.join(target, os.path.relpath(i["path"], qt_install_qml))
                 #QTBUG-48424, QTBUG-45977: In release mode, qmlimportscanner does not report
                 #the dependency of QtQuick.Controls on QtQuick.PrivateWidgets due to missing files.
                 #Recreate the run-time logic here as best as we can - deploy it if
                 #      1) QtWidgets is used
                 #      2) QtQuick.Controls is used
                 if i["name"] == "QtQuick.Controls":
-                    used_qmlmodules[os.path.join(i["path"], "PrivateWidgets")] = os.path.join(target, "QtQuick/PrivateWidgets")
+                    used_qmlmodules[os.path.abspath(os.path.join(i["path"], ".." ,"PrivateWidgets"))] = os.path.join(target, "QtQuick/PrivateWidgets")
 
         #Only copy the outermost directory when there are nested directories
         sorted_modules = sorted(used_qmlmodules.keys(), key=lambda x: (x, len(x)))

@@ -28,8 +28,8 @@ def getoutput(cmd):
     result = ""
     try:
         result = subprocess.check_output(cmd, shell=True, universal_newlines=True, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as ex:
-        result = ex.output
+    except subprocess.CalledProcessError as e:
+        result = e.output
 
     return result.strip("\n")
 
@@ -54,7 +54,10 @@ def process_binary(objdump, available_dlls, binary_path, target, skip, done = []
             if dll not in done and dll not in skip:
                 logging.info(level*"    " + "Processing: " + dll)
                 if not os.path.exists(os.path.join(target, dll)):
-                    shutil.copy(available_dlls[dll], target)
+                    try:
+                        shutil.copy(available_dlls[dll], target)
+                    except shutil.SameFileError:
+                        logging.warning(available_dlls[dll] + "has already been copied")
                 done.append(dll)
                 result += process_binary(objdump, available_dlls, available_dlls[dll], target, skip, done, level + 1)
         else:
@@ -77,7 +80,10 @@ def copy_additionaldlls(available_dlls, dlls, target):
     for dll in dlls:
         if dll in available_dlls:
             logging.info("Copying:" + dll)
-            shutil.copy(available_dlls[dll], target)
+            try:
+                shutil.copy(available_dlls[dll], target)
+            except shutil.SameFileError:
+                logging.warning(available_dlls[dll] + " has already been copied")
             result.append(available_dlls[dll])
         else:
             logging.warning(dll + " Not found (SKIPPING)")

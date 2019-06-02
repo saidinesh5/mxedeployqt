@@ -179,19 +179,21 @@ def main():
     parser = argparse.ArgumentParser(conflict_handler='resolve')
 
     parser.add_argument("--mxepath",
-                        help="path to mxe installation. (Default: /opt/mxe)")
+                        help="Path to mxe installation. (Default: /opt/mxe)")
     parser.add_argument("--mxetarget",
-                        help="mxe target to use (Default: i686-w64-mingw32.shared)")
+                        help="Mxe target to use. (Default: i686-w64-mingw32.shared)")
     parser.add_argument("--qtplugins",
-                        help="; separated list of qt plugins to copy (Default: all Qt plugins)")
+                        help="; separated list of qt plugins to copy. (Default: all Qt plugins)")
     parser.add_argument("--qmlmodules",
-                        help="; separated list of qml modules to copy. (Default autodetected, if qmlrootpath is supplied and qmlimportscanner is available")
+                        help="; separated list of qml modules to copy. (Default autodetected, if qmlrootpath is supplied and qmlimportscanner is available.")
     parser.add_argument("--skiplibs",
                         help="; separated list of libraries to skip. (Default: None) ")
     parser.add_argument("--additionallibs",
                         help="; separated list of libraries to copy. (Default: None) ")
     parser.add_argument("--qmlrootpath",
-                        help="Path in the source directory to scan qml files for, for using modules")
+                        help="Path in the source directory to scan qml files for, for using modules.")
+    parser.add_argument("--angle",
+                        help="Force deployment of ANGLE libraries. (Default: no)")
     parser.add_argument("target")
 
     args = parser.parse_args()
@@ -226,6 +228,11 @@ def main():
         additionallibs = additionallibs.split(";")
     else:
         additionallibs = []
+
+    if args.angle:
+        additionallibs.append('libGLESv2.dll')
+        additionallibs.append('libEGL.dll')
+        additionallibs.append('opengl32sw.dll')
 
     mxe_files = find_files(mxe_path)
     mxe_target_files = [f for f in mxe_files if f.find(mxe_target) != -1]

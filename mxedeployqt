@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 """
 Thanks to pyWindeployqt by Alexey Elymanov (strangeqargo@gmail.com)
@@ -193,7 +193,8 @@ def main():
     parser.add_argument("--qmlrootpath",
                         help="Path in the source directory to scan qml files for, for using modules.")
     parser.add_argument("--angle",
-                        help="Force deployment of ANGLE libraries. (Default: no)")
+                        help="Force deployment of ANGLE libraries. (Default: no)",
+                        action="store_true")
     parser.add_argument("target")
 
     args = parser.parse_args()

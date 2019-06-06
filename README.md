@@ -21,7 +21,7 @@ mxedeployqt --qtplugins="canbus;iconengines;imageformats;platforminputcontexts;p
 usage: mxedeployqt [-h] [--mxepath MXEPATH] [--mxetarget MXETARGET]
                    [--qtplugins QTPLUGINS] [--qmlmodules QMLMODULES]
                    [--skiplibs SKIPLIBS] [--additionallibs ADDITIONALLIBS]
-                   [--qmlrootpath QMLROOTPATH]
+                   [--qmlrootpath QMLROOTPATH] [--angle]
                    target
 
 positional arguments:
@@ -29,22 +29,23 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --mxepath MXEPATH     path to mxe installation. (Default: /opt/mxe)
+  --mxepath MXEPATH     Path to mxe installation. (Default: /opt/mxe)
   --mxetarget MXETARGET
-                        mxe target to use (Default: i686-w64-mingw32.shared)
+                        Mxe target to use. (Default: i686-w64-mingw32.shared)
   --qtplugins QTPLUGINS
-                        ; separated list of qt plugins to copy (Default: all
+                        ; separated list of qt plugins to copy. (Default: all
                         Qt plugins)
   --qmlmodules QMLMODULES
                         ; separated list of qml modules to copy. (Default
                         autodetected, if qmlrootpath is supplied and
-                        qmlimportscanner is available
+                        qmlimportscanner is available.
   --skiplibs SKIPLIBS   ; separated list of libraries to skip. (Default: None)
   --additionallibs ADDITIONALLIBS
                         ; separated list of libraries to copy. (Default: None)
   --qmlrootpath QMLROOTPATH
                         Path in the source directory to scan qml files for,
-                        for using modules
+                        for using modules.
+  --angle               Force deployment of ANGLE libraries. (Default: no)
 ```
 
 

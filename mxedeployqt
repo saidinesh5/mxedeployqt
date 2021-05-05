@@ -240,7 +240,7 @@ def main():
     mxe_dlls = [f for f in mxe_target_files if f.lower().endswith(".dll")]
 
     objdump = next(iter([f for f in mxe_target_files if f.endswith("objdump")]), None)
-    qmake = next(iter([f for f in mxe_target_files if f.endswith("qmake-qt5")]), None)
+    qmake = next(iter([f for f in mxe_target_files if f.endswith("qmake-qt5") or os.path.basename(f) == "qmake"]), None)
     qmlimportscanner = next(iter([f for f in mxe_target_files if f.endswith("qmlimportscanner")]), None)
 
     error = None

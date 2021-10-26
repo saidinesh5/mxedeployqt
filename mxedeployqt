@@ -147,7 +147,7 @@ def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, sk
         for module_source in sorted_modules:
             if os.path.abspath(os.path.join(module_source, os.pardir)) not in copied_dirs:
                 copy_dir(module_source, used_qmlmodules[module_source], skip)
-                copied_dirs.add(module_source)
+            copied_dirs.add(module_source)
     else:
         logging.error("Unable to retrieve QT_INSTALL_QMLS from qmake")
 

@@ -143,11 +143,11 @@ def copy_qmlmodules(qmake, qmlimportscanner, qmlrootpath, qmlmodules, target, sk
 
         #Only copy the outermost directory when there are nested directories
         sorted_modules = sorted(used_qmlmodules.keys(), key=lambda x: (x, len(x)))
-        parent_dir = ""
+        copied_dirs = []
         for module_source in sorted_modules:
-            if len(parent_dir) < 1 or module_source.find(parent_dir) != 0:
+            if os.path.abspath(os.path.join(module_source, os.pardir)) not in copied_dirs:
                 copy_dir(module_source, used_qmlmodules[module_source], skip)
-                parent_dir = module_source.rstrip(os.sep)
+                copied_dirs.append(module_source)
     else:
         logging.error("Unable to retrieve QT_INSTALL_QMLS from qmake")
 

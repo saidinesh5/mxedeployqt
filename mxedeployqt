@@ -195,6 +195,8 @@ def main():
     parser.add_argument("--angle",
                         help="Force deployment of ANGLE libraries. (Default: no)",
                         action="store_true")
+    parser.add_argument("--binaries",
+                        help="Path to binaries. (Default: same as target)")
     parser.add_argument("target")
 
     args = parser.parse_args()
@@ -217,6 +219,12 @@ def main():
     qml_modules = args.qmlmodules
     if qml_modules:
         qml_modules = [m for m in qml_modules.split(";") if len(m) > 0]
+
+    binaries = args.binaries
+    if binaries:
+        binaries = os.path.expanduser(args.binaries)
+    else:
+        binaries = target
 
     skip = args.skiplibs
     if skip:
@@ -265,7 +273,7 @@ def main():
     copy_qtplugins(qmake, qt_plugins, os.path.join(target, "plugins"), skip)
     copy_qmlmodules(qmake, qmlimportscanner, args.qmlrootpath, qml_modules, os.path.join(target, "qml"), skip)
 
-    target_files = find_files(target)
+    target_files = find_files(binaries)
     target_dlls = [f for f in target_files if f.lower().endswith(".dll")]
     target_executables = [f for f in target_files if f.lower().endswith(".exe")]
     target_binaries = target_executables + target_dlls
